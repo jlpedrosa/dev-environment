@@ -41,8 +41,24 @@ function create_links {
 }
 
 function install_go {
-	echo "go installed"
+	
+	filename='go1.13.4.linux-amd64.tar.gz'
+	wget "https://dl.google.com/go/${filename}"
+
+	tar -C /usr/local -xzf go${filename}
+
 	echo 'export GOPATH=$HOME/go' >>  ~/.bash_profile
+}
+
+function "install_terraform" {
+	filename='terraform_0.12.16_linux_amd64.zip'
+	wget "https://releases.hashicorp.com/terraform/0.12.16/${filename}"
+	unzip ${filename}
+	mv terraform /usr/bin
+}
+
+function install_az_cli {
+	curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 }
 
 function install_docker_repo {
@@ -52,7 +68,7 @@ function install_docker_repo {
     ca-certificates \
     curl \
     gnupg-agent \
-    software-properties-common
+    software-properties-common 
 
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 
@@ -60,8 +76,6 @@ function install_docker_repo {
    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
    $(lsb_release -cs) \
    stable"
-
-
 }
 
 
@@ -70,26 +84,23 @@ function install_docker {
 }
 
 function install_systools {
-	apt -y install iftop iotop sysstat
+	apt-get -y -y install iftop iotop sysstat
 }
 
 function install_all {
 
-	apt-get update
-	#install_docker_repo
-
-	apt-get update
-	
+	apt-get update -y 
+	install_docker_repo
+	apt-get update -y 	
 	install_systools
 	install_docker
 	install_go
+	install_terraform
+	install_az_cli
 }
 
 set -e 
  
-#fix_disk
-#create_links
-
+fix_disk
+create_links
 install_all
-
-
