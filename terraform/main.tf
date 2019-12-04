@@ -1,13 +1,40 @@
 
+locals {
+  tags = {
+    environment = "dev-machine"
+    owner = var.user
+  }
+}
 
 resource "azurerm_resource_group" "main" {
   name     = "${var.user}-dev-rg"
   location = var.location
+  tags = local.tags
+}
 
-  tags = {
-    environment = "dev-machine"
-  }
+resource "azurerm_network_security_group" "dev_subnet_security_group" {
+  name                = "dev-subnet-sg"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+}
 
+resource "azurerm_network_security_rule" "allow_ssh" {
+  name                        = "allow_ssh"
+  priority                    = 100
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "22"
+  source_address_prefix       = "*"
+  destination_address_prefix  = "*"
+  resource_group_name         = azurerm_resource_group.main.name
+  network_security_group_name = azurerm_network_security_group.dev_subnet_security_group.name
+}
+
+resource "azurerm_subnet_network_security_group_association" "example" {
+  subnet_id                 = azurerm_subnet.internal.id
+  network_security_group_id = azurerm_network_security_group.dev_subnet_security_group.id
 }
 
 resource "azurerm_virtual_network" "main" {
@@ -15,6 +42,7 @@ resource "azurerm_virtual_network" "main" {
   address_space       = ["10.40.0.0/16"]
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
+  tags = local.tags
 }
 
 resource "azurerm_subnet" "internal" {
@@ -22,6 +50,15 @@ resource "azurerm_subnet" "internal" {
   resource_group_name  = azurerm_resource_group.main.name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefix       = "10.40.1.0/24"
+
+}
+
+resource "azurerm_public_ip" "vmpubip" {
+  name                = "${var.user}-dev-vm-nic-pub-ip"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  allocation_method   = "Static"
+  tags = local.tags
 }
 
 resource "azurerm_network_interface" "main" {
@@ -33,8 +70,12 @@ resource "azurerm_network_interface" "main" {
     name                          = "${var.user}-dev-vm-nic-cfg"
     subnet_id                     = azurerm_subnet.internal.id
     private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.vmpubip.id
   }
+  tags = local.tags
 }
+
+
 
 resource "azurerm_virtual_machine" "main" {
   name                  = "${var.user}-ubuntu-dev-vm"
@@ -84,15 +125,11 @@ resource "azurerm_virtual_machine" "main" {
         create_option     = "Empty"
         disk_size_gb      = "512"
         lun               = "1"
-        write_accelerator_enabled = true
+        write_accelerator_enabled = false
         managed_disk_type = "Premium_LRS"
 
     }
-  
-
-  tags = {
-    environment = "dev-machine"
-  }
+    tags = local.tags
 }
 
 resource "azurerm_virtual_machine_extension" "main" {
@@ -106,12 +143,10 @@ resource "azurerm_virtual_machine_extension" "main" {
 
   settings = <<SETTINGS
   {
-        "fileUris"         : "https://raw.githubusercontent.com/jlpedrosa/dev-environment/master/config_server.sh",
-        "commandToExecute" : "sh config_server.sh"
+        "fileUris"         : ["https://raw.githubusercontent.com/jlpedrosa/dev-environment/master/config_server.sh"],
+        "commandToExecute" : "bash config_server.sh"
   }
 SETTINGS
 
-  tags = {
-    environment = "dev-machine"
-  }
+  tags = local.tags
 }

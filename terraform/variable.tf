@@ -7,5 +7,5 @@ variable "location" {
 }
 
 variable "vm_size" {
-    default = "Standard F16s_v2"
+    default = "Standard_F16s_v2"
 }
