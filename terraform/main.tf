@@ -151,10 +151,10 @@ SETTINGS
   tags = local.tags
 }
 
-resource "local_file" "foo" {
+resource "local_file" "settings" {
     sensitive_content = <<EOF
 {
-    "user" = "${local.user}"
+    "user" : "${local.user}"
 }
 EOF
     filename = "${path.module}/installsettings.json"
