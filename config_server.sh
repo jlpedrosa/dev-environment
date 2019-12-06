@@ -22,7 +22,8 @@ function fix_disk {
 }
 
 function create_links {
-    
+
+    HOME="/home/${real_user}" 
     echo "Creating folders and symlinks for ${real_user} and ${HOME}"
     
     rm -rf ${HOME}/go /var/lib/docker ${HOME}/projects
@@ -90,6 +91,12 @@ function install_systools {
     apt-get -y -y install iftop iotop sysstat
 }
 
+function install_chrome {
+    apt-get install libxss1 libappindicator1 libindicator7
+    wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+    dpkg -i google-chrome*.deb
+}
+
 function install_all {
     
     apt-get update -y
@@ -100,6 +107,7 @@ function install_all {
     install_go
     install_terraform
     install_az_cli
+    install_chrome
 }
 
 set -e

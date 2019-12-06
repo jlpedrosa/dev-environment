@@ -154,7 +154,7 @@ SETTINGS
 resource "local_file" "foo" {
     sensitive_content = <<EOF
 {
-    user = ${local.user}
+    "user" = "${local.user}"
 }
 EOF
     filename = "${path.module}/installsettings.json"
@@ -178,7 +178,6 @@ resource "azurerm_storage_container" "dev-storage-account-container" {
 
 resource "azurerm_storage_blob" "configsettings" {
   name                   = "installsettings.json"
-  resource_group_name    = azurerm_resource_group.main.name
   storage_account_name   = azurerm_storage_account.dev-storage-account.name
   storage_container_name = azurerm_storage_container.dev-storage-account-container.name
   type                   = "Block"
