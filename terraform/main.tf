@@ -4,10 +4,11 @@ locals {
     environment = "dev-machine"
     owner = var.user
   }
+  user = var.user
 }
 
 resource "azurerm_resource_group" "main" {
-  name     = "${var.user}-dev-rg"
+  name     = "${local.user}-dev-rg"
   location = var.location
   tags = local.tags
 }
@@ -38,7 +39,7 @@ resource "azurerm_subnet_network_security_group_association" "example" {
 }
 
 resource "azurerm_virtual_network" "main" {
-  name                = "${var.user}-dev-network"
+  name                = "${local.user}-dev-network"
   address_space       = ["10.40.0.0/16"]
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
@@ -54,7 +55,7 @@ resource "azurerm_subnet" "internal" {
 }
 
 resource "azurerm_public_ip" "vmpubip" {
-  name                = "${var.user}-dev-vm-nic-pub-ip"
+  name                = "${local.user}-dev-vm-nic-pub-ip"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
   allocation_method   = "Static"
@@ -62,33 +63,32 @@ resource "azurerm_public_ip" "vmpubip" {
 }
 
 resource "azurerm_network_interface" "main" {
-  name                = "${var.user}-dev-vm-nic"
+  name                = "${local.user}-dev-vm-nic"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
 
   ip_configuration {
-    name                          = "${var.user}-dev-vm-nic-cfg"
+    name                          = "${local.user}-dev-vm-nic-cfg"
     subnet_id                     = azurerm_subnet.internal.id
     private_ip_address_allocation = "Dynamic"
     public_ip_address_id          = azurerm_public_ip.vmpubip.id
   }
   tags = local.tags
+  enable_accelerated_networking = true
 }
 
 
 
 resource "azurerm_virtual_machine" "main" {
-  name                  = "${var.user}-ubuntu-dev-vm"
+  name                  = "${local.user}-ubuntu-dev-vm"
   location              = azurerm_resource_group.main.location
   resource_group_name   = azurerm_resource_group.main.name
   network_interface_ids = [azurerm_network_interface.main.id]
   vm_size               = var.vm_size
 
-  # Uncomment this line to delete the OS disk automatically when deleting the VM
   delete_os_disk_on_termination = true
 
 
-  # Uncomment this line to delete the data disks automatically when deleting the VM
   delete_data_disks_on_termination = true
 
   storage_image_reference {
@@ -99,15 +99,15 @@ resource "azurerm_virtual_machine" "main" {
   }
 
   storage_os_disk {
-    name              = "${var.user}-ubuntu1804-dev-os-disk"
+    name              = "${local.user}-ubuntu1804-dev-os-disk"
     caching           = "ReadWrite"
     create_option     = "FromImage"
     managed_disk_type = "Standard_LRS"
   }
 
   os_profile {
-    computer_name  = "${var.user}-ubuntu1804-dev"
-    admin_username = var.user
+    computer_name  = "${local.user}-ubuntu1804-dev"
+    admin_username = local.user
     
   }
 
@@ -115,12 +115,12 @@ resource "azurerm_virtual_machine" "main" {
     disable_password_authentication = true
     ssh_keys {
         key_data = file("~/.ssh/id_rsa.pub")
-        path = "/home/${var.user}/.ssh/authorized_keys"
+        path = "/home/${local.user}/.ssh/authorized_keys"
     }
   }
 
     storage_data_disk {
-        name              = "${var.user}-ubuntu1804-dev-data-disk"
+        name              = "${local.user}-ubuntu1804-dev-data-disk"
         caching           = "ReadWrite"
         create_option     = "Empty"
         disk_size_gb      = "512"
@@ -149,4 +149,38 @@ resource "azurerm_virtual_machine_extension" "main" {
 SETTINGS
 
   tags = local.tags
+}
+
+resource "local_file" "foo" {
+    sensitive_content = <<EOF
+{
+    user = ${local.user}
+}
+EOF
+    filename = "${path.module}/installsettings.json"
+}
+
+
+resource "azurerm_storage_account" "dev-storage-account" {
+  name                     = "${local.user}devsa"
+  resource_group_name      = azurerm_resource_group.main.name
+  location                 = azurerm_resource_group.main.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+  tags = local.tags
+}
+
+resource "azurerm_storage_container" "dev-storage-account-container" {
+  name                  = "installsettings"
+  storage_account_name  = azurerm_storage_account.dev-storage-account.name
+  container_access_type = "private"
+}
+
+resource "azurerm_storage_blob" "configsettings" {
+  name                   = "installsettings.json"
+  resource_group_name    = azurerm_resource_group.main.name
+  storage_account_name   = azurerm_storage_account.dev-storage-account.name
+  storage_container_name = azurerm_storage_container.dev-storage-account-container.name
+  type                   = "Block"
+  source                 = "installsettings.json"
 }

@@ -23,8 +23,6 @@ function fix_disk {
 
 function create_links {
     
-	echo "Creating links"
-    real_user=`logname`
     echo "Creating folders and symlinks for ${real_user} and ${HOME}"
     
     rm -rf ${HOME}/go /var/lib/docker ${HOME}/projects
@@ -105,6 +103,14 @@ function install_all {
 }
 
 set -e
+
+if [ "$1" != "" ]; then
+    real_user="$1"
+else
+    echo "The script must be invoked with the username as first argument"
+	exit 1
+fi
+
 
 fix_disk
 create_links
