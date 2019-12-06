@@ -92,7 +92,7 @@ function install_systools {
 }
 
 function install_chrome {
-    apt-get -y install fonts-liberation  libappindicator3-1 libasound2 libatk-bridge2.0-0 libatspi2.0-0 libgtk-3-0 libnspr4 libnss3 libx11-xcb1 xdg-utils
+    apt-get -y install fonts-liberation  libappindicator3-1 libasound2 libatk-bridge2.0-0 libatspi2.0-0 libgtk-3-0 libnspr4 libnss3 libx11-xcb1 xdg-utils libxss1
     wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
     dpkg -i google-chrome*.deb
 }
