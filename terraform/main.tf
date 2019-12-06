@@ -144,7 +144,7 @@ resource "azurerm_virtual_machine_extension" "main" {
   settings = <<SETTINGS
   {
         "fileUris"         : ["https://raw.githubusercontent.com/jlpedrosa/dev-environment/master/config_server.sh"],
-        "commandToExecute" : "bash config_server.sh"
+        "commandToExecute" : "bash config_server.sh ${local.user}"
   }
 SETTINGS
 
