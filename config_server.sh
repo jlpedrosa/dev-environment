@@ -3,18 +3,22 @@
 function fix_disk {
     
 	echo "Arranging data disk"
-    umount /dev/sdb1 && echo "Device mounted" || echo "Failed to umount"
+    echo "Un mounting data disk"
+    umount /dev/sdb1
     
-    dd if=/dev/zero of=/dev/sdb bs=1024 count=8096  && echo "Disk wipped" || echo "Failed to wipe disk"
-    
-    parted -s /dev/sdb mktable gpt && echo "Created partition table" || echo "Failed to create partition table"
+    echo "Wiping diskk"
+    dd if=/dev/zero of=/dev/sdb bs=1024 count=8096 
+
+    echo "Creating partition table"
+    parted -s /dev/sdb mktable gpt
     
     echo "Creating partition"
     parted -s /dev/sdb mkpart primary ext4 0% 100%
     
+    echo "Reading partition tables"
     partprobe
     
-    echo "Formatting disk"
+    echo "Formatting disk with ext4"
     mkfs.ext4 /dev/sdb1
     
     echo "Mounting disk"
@@ -23,7 +27,6 @@ function fix_disk {
 
 function create_links {
 
-    HOME="/home/${real_user}" 
     echo "Creating folders and symlinks for ${real_user} and ${HOME}"
     
     rm -rf ${HOME}/go /var/lib/docker ${HOME}/projects
@@ -85,6 +88,7 @@ function install_docker_repo {
 
 function install_docker {
     apt-get -y install docker-ce docker-ce-cli containerd.io
+    usermod -aG docker ${real_user}
 }
 
 function install_systools {
@@ -95,6 +99,10 @@ function install_chrome {
     apt-get -y install fonts-liberation  libappindicator3-1 libasound2 libatk-bridge2.0-0 libatspi2.0-0 libgtk-3-0 libnspr4 libnss3 libx11-xcb1 xdg-utils libxss1
     wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
     dpkg -i google-chrome*.deb
+}
+
+function install_dev_tools {
+    apt-get -y install make gcc
 }
 
 function install_all {
@@ -108,12 +116,14 @@ function install_all {
     install_terraform
     install_az_cli
     install_chrome
+    install_dev_tools
 }
 
 set -e
 
 if [ "$1" != "" ]; then
     real_user="$1"
+    HOME="/home/${real_user}" 
 else
     echo "The script must be invoked with the username as first argument"
 	exit 1
